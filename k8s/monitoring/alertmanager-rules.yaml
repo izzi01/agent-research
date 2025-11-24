@@ -1,0 +1,248 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: marketing-automation-alerts
+  namespace: marketing-automation
+  labels:
+    prometheus: kube-prometheus-stack
+    role: alert-rules
+spec:
+  groups:
+    # Business Critical Alerts
+    - name: business-critical
+      interval: 1m
+      rules:
+        - alert: HighContentRejectionRate
+          expr: |
+            (sum(increase(content_approval_total{decision="rejected"}[1h])) /
+             sum(increase(content_approval_total[1h]))) * 100 > 50
+          for: 10m
+          labels:
+            severity: warning
+            team: marketing
+          annotations:
+            summary: "High content rejection rate detected"
+            description: "Content rejection rate is {{ $value }}% over the last hour. More than 50% of content is being rejected."
+
+        - alert: NoContentGenerated
+          expr: |
+            increase(agent_executions_total{agent_name="TextCreator",status="completed"}[2h]) == 0 and
+            increase(agent_executions_total{agent_name="VideoGenerator",status="completed"}[2h]) == 0
+          for: 30m
+          labels:
+            severity: critical
+            team: engineering
+          annotations:
+            summary: "No content generated in 2 hours"
+            description: "Marketing automation has not generated any content (text or video) in the past 2 hours."
+
+        - alert: VideoCostSpike
+          expr: |
+            increase(video_generation_cost_usd[1h]) > 50
+          for: 5m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Video generation cost spike detected"
+            description: "Video generation costs exceeded $50 in the last hour. Current cost: ${{ $value }}"
+
+        - alert: LLMCostSpike
+          expr: |
+            ((increase(llm_tokens_used_total{provider="anthropic",type="input"}[1h]) * 0.000003) +
+             (increase(llm_tokens_used_total{provider="anthropic",type="output"}[1h]) * 0.000015)) > 10
+          for: 5m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "LLM cost spike detected"
+            description: "Claude API costs exceeded $10 in the last hour. Current cost: ${{ $value }}"
+
+    # System Health Alerts
+    - name: system-health
+      interval: 30s
+      rules:
+        - alert: HighAgentExecutionFailureRate
+          expr: |
+            (sum(rate(agent_executions_total{status="failed"}[5m])) /
+             sum(rate(agent_executions_total[5m]))) * 100 > 10
+          for: 5m
+          labels:
+            severity: critical
+            team: engineering
+          annotations:
+            summary: "High agent execution failure rate"
+            description: "Agent execution failure rate is {{ $value }}% over the last 5 minutes. More than 10% of executions are failing."
+
+        - alert: AgentOSPodDown
+          expr: |
+            kube_deployment_status_replicas_available{namespace="marketing-automation",deployment="agentos"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: engineering
+          annotations:
+            summary: "AgentOS has no available pods"
+            description: "All AgentOS pods are down. Marketing automation is completely offline."
+
+        - alert: AgentOSHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{namespace="marketing-automation",pod=~"agentos.*"} /
+            container_spec_memory_limit_bytes{namespace="marketing-automation",pod=~"agentos.*"} > 0.9
+          for: 10m
+          labels:
+            severity: warning
+            team: engineering
+          annotations:
+            summary: "AgentOS high memory usage"
+            description: "AgentOS pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit."
+
+        - alert: AgentOSHighCPUUsage
+          expr: |
+            rate(container_cpu_usage_seconds_total{namespace="marketing-automation",pod=~"agentos.*"}[5m]) > 1.8
+          for: 10m
+          labels:
+            severity: warning
+            team: engineering
+          annotations:
+            summary: "AgentOS high CPU usage"
+            description: "AgentOS pod {{ $labels.pod }} is using {{ $value }} CPU cores."
+
+        - alert: PostgreSQLDown
+          expr: |
+            up{job="postgres-exporter"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: engineering
+          annotations:
+            summary: "PostgreSQL is down"
+            description: "PostgreSQL database is unreachable. All marketing automation operations are blocked."
+
+        - alert: PostgreSQLHighConnections
+          expr: |
+            pg_stat_database_numbackends{datname="marketing_automation"} > 80
+          for: 5m
+          labels:
+            severity: warning
+            team: engineering
+          annotations:
+            summary: "PostgreSQL high connection count"
+            description: "PostgreSQL has {{ $value }} active connections. Approaching connection limit."
+
+        - alert: PostgreSQLDiskSpaceWarning
+          expr: |
+            pg_database_size_bytes{datname="marketing_automation"} / (50 * 1024 * 1024 * 1024) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "PostgreSQL disk space warning"
+            description: "PostgreSQL database is using {{ $value | humanizePercentage }} of allocated storage (50GB)."
+
+        - alert: N8nWorkflowFailures
+          expr: |
+            increase(n8n_workflow_executions_total{status="error"}[15m]) > 5
+          for: 5m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Multiple n8n workflow failures"
+            description: "n8n workflow '{{ $labels.workflow_name }}' has failed {{ $value }} times in the last 15 minutes."
+
+    # Performance Alerts
+    - name: performance
+      interval: 1m
+      rules:
+        - alert: SlowAgentExecution
+          expr: |
+            histogram_quantile(0.95, agent_execution_duration_seconds_bucket) > 300
+          for: 10m
+          labels:
+            severity: warning
+            team: engineering
+          annotations:
+            summary: "Slow agent execution detected"
+            description: "Agent {{ $labels.agent_name }} p95 execution time is {{ $value }}s (>5 minutes)."
+
+        - alert: SlowApprovalCycle
+          expr: |
+            histogram_quantile(0.95, approval_cycle_time_seconds_bucket) > 14400
+          for: 30m
+          labels:
+            severity: info
+            team: marketing
+          annotations:
+            summary: "Slow approval cycle time"
+            description: "p95 approval cycle time is {{ $value | humanizeDuration }}. Content is waiting >4 hours for approval."
+
+        - alert: VideoQueueBacklog
+          expr: |
+            video_generation_queue_length > 50
+          for: 15m
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Large video generation queue backlog"
+            description: "Video generation queue has {{ $value }} pending videos. Processing may be slow."
+
+    # Data Quality Alerts
+    - name: data-quality
+      interval: 5m
+      rules:
+        - alert: NoTrendsMonitored
+          expr: |
+            increase(trends_monitored_total{source="tiktok"}[6h]) == 0
+          for: 30m
+          labels:
+            severity: warning
+            team: marketing
+          annotations:
+            summary: "No TikTok trends monitored in 6 hours"
+            description: "TrendMonitor agent has not discovered any new trends in 6 hours. Check TikTok API integration."
+
+        - alert: PlatformPostingFailure
+          expr: |
+            increase(platform_posts_total{status="failed"}[1h]) > 10
+          for: 5m
+          labels:
+            severity: critical
+            team: engineering
+          annotations:
+            summary: "Multiple platform posting failures"
+            description: "{{ $value }} posts failed to publish to {{ $labels.platform }} in the last hour. Check API credentials and rate limits."
+
+    # Cost Budget Alerts
+    - name: cost-budget
+      interval: 1h
+      rules:
+        - alert: MonthlyBudgetWarning
+          expr: |
+            (sum(increase(video_generation_cost_usd[30d])) +
+             sum((increase(llm_tokens_used_total{provider="anthropic",type="input"}[30d]) * 0.000003) +
+                 (increase(llm_tokens_used_total{provider="anthropic",type="output"}[30d]) * 0.000015))) > 400
+          for: 1h
+          labels:
+            severity: warning
+            team: operations
+          annotations:
+            summary: "Approaching monthly budget limit"
+            description: "Total video + LLM costs for the month: ${{ $value }}. Budget limit is $500/month."
+
+        - alert: MonthlyBudgetExceeded
+          expr: |
+            (sum(increase(video_generation_cost_usd[30d])) +
+             sum((increase(llm_tokens_used_total{provider="anthropic",type="input"}[30d]) * 0.000003) +
+                 (increase(llm_tokens_used_total{provider="anthropic",type="output"}[30d]) * 0.000015))) > 500
+          for: 30m
+          labels:
+            severity: critical
+            team: operations
+          annotations:
+            summary: "Monthly budget exceeded"
+            description: "Total video + LLM costs for the month: ${{ $value }}. Budget limit ($500) has been exceeded!"

@@ -1,0 +1,162 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-service
+  namespace: marketing-automation
+  labels:
+    app: n8n
+spec:
+  selector:
+    app: n8n
+  ports:
+    - name: http
+      port: 5678
+      targetPort: 5678
+    - name: metrics
+      port: 5678
+      targetPort: 5678
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-data
+  namespace: marketing-automation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName: do-block-storage  # Uncomment for DigitalOcean
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: marketing-automation
+  labels:
+    app: n8n
+spec:
+  replicas: 1  # n8n runs as single instance
+  selector:
+    matchLabels:
+      app: n8n
+  strategy:
+    type: Recreate  # Important for PVC-based deployments
+  template:
+    metadata:
+      labels:
+        app: n8n
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5678"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: n8n
+          image: n8nio/n8n:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5678
+              name: http
+          env:
+            # n8n Configuration from ConfigMap
+            - name: N8N_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: N8N_HOST
+            - name: N8N_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: N8N_PROTOCOL
+            - name: N8N_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: N8N_PORT
+            - name: WEBHOOK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: WEBHOOK_URL
+            - name: N8N_METRICS
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: N8N_METRICS_ENABLE
+            # Database configuration
+            - name: DB_TYPE
+              value: "postgresdb"
+            - name: DB_POSTGRESDB_HOST
+              value: "postgres-service"
+            - name: DB_POSTGRESDB_PORT
+              value: "5432"
+            - name: DB_POSTGRESDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: POSTGRES_DB
+            - name: DB_POSTGRESDB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: marketing-automation-config
+                  key: POSTGRES_USER
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            # Encryption key
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys-secret
+                  key: N8N_ENCRYPTION_KEY
+            # AgentOS integration endpoint
+            - name: AGENTOS_URL
+              value: "http://agentos-service:8080"
+            # Execution settings
+            - name: EXECUTIONS_PROCESS
+              value: "main"
+            - name: EXECUTIONS_MODE
+              value: "regular"
+            - name: N8N_LOG_LEVEL
+              value: "info"
+            - name: N8N_LOG_OUTPUT
+              value: "console"
+          volumeMounts:
+            - name: n8n-data
+              mountPath: /home/node/.n8n
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: n8n-data
+          persistentVolumeClaim:
+            claimName: n8n-data

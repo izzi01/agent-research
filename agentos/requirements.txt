@@ -1,0 +1,45 @@
+# AgentOS Requirements for Vietnamese Marketing Automation
+
+# Agno Framework
+agno==0.3.0  # AI agent framework
+agno-anthropic==0.2.0  # Claude integration
+
+# FastAPI and Server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+python-multipart==0.0.6
+
+# Database
+psycopg2-binary==2.9.9  # PostgreSQL adapter
+sqlalchemy==2.0.25  # ORM
+alembic==1.13.1  # Database migrations
+pgvector==0.2.4  # Vector similarity search
+
+# AI/ML
+anthropic==0.18.0  # Claude API
+openai==1.12.0  # For embeddings (optional)
+sentence-transformers==2.3.1  # Free embedding alternative
+tiktoken==0.5.2  # Token counting
+
+# Monitoring and Metrics
+prometheus-client==0.19.0  # Prometheus metrics
+python-json-logger==2.0.7  # Structured logging
+
+# HTTP Clients
+httpx==0.26.0  # Async HTTP client
+requests==2.31.0  # Sync HTTP client
+
+# Utilities
+python-dotenv==1.0.1  # Environment variables
+pyyaml==6.0.1  # YAML parsing
+tenacity==8.2.3  # Retry logic
+
+# Vietnamese Language Processing (optional)
+underthesea==6.7.0  # Vietnamese NLP toolkit
+
+# Development Dependencies (remove in production)
+pytest==7.4.4
+pytest-asyncio==0.23.3
+black==24.1.1
+flake8==7.0.0

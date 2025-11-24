@@ -1,0 +1,74 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: approval-ui-service
+  namespace: marketing-automation
+  labels:
+    app: approval-ui
+spec:
+  selector:
+    app: approval-ui
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-ui
+  namespace: marketing-automation
+  labels:
+    app: approval-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: approval-ui
+  template:
+    metadata:
+      labels:
+        app: approval-ui
+    spec:
+      containers:
+        - name: approval-ui
+          image: your-registry/approval-ui:latest  # REPLACE with your container registry
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            # Backend API URL
+            - name: REACT_APP_API_URL
+              value: "http://agentos-service:8080"
+            - name: REACT_APP_WEBSOCKET_URL
+              value: "ws://agentos-service:8080/ws"
+            # Environment
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

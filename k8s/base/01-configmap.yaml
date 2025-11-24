@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marketing-automation-config
+  namespace: marketing-automation
+data:
+  # AgentOS Configuration
+  AGENTOS_ENV: "production"
+  LOG_LEVEL: "info"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "8080"
+
+  # PostgreSQL Configuration
+  POSTGRES_DB: "marketing_automation"
+  POSTGRES_USER: "agno"
+
+  # n8n Configuration
+  N8N_HOST: "marketing.your-domain.com"
+  N8N_PROTOCOL: "https"
+  N8N_PORT: "443"
+  WEBHOOK_URL: "https://marketing.your-domain.com/n8n"
+  N8N_METRICS_ENABLE: "true"
+
+  # Platform API Endpoints
+  FACEBOOK_GRAPH_API_VERSION: "v19.0"
+  TIKTOK_API_VERSION: "v2"
+  SHOPEE_API_VERSION: "v2.0"
+
+  # Video Tool Configuration
+  SIMPLIFIED_API_URL: "https://api.simplified.com/v1"
+  HEYGEN_API_URL: "https://api.heygen.com/v1"
+  DID_API_URL: "https://api.d-id.com"
+  RUNWAY_API_URL: "https://api.runwayml.com/v1"
+
+  # Vbee TTS Configuration
+  VBEE_API_URL: "https://api.vbee.vn/v1"
+  VBEE_VOICE_DEFAULT: "hn_female_ngochuyen_full_48k-fhg"
+
+  # Claude Configuration
+  ANTHROPIC_API_URL: "https://api.anthropic.com/v1"
+  ANTHROPIC_MODEL: "claude-4-sonnet-20250514"
+  ANTHROPIC_MAX_TOKENS: "8192"
+
+  # Approval Workflow Configuration
+  APPROVAL_BATCH_SIZE: "20"
+  APPROVAL_UI_URL: "https://marketing.your-domain.com"
+
+  # Trend Monitoring Configuration
+  TIKTOK_TRENDS_CHECK_INTERVAL: "3600"  # 1 hour in seconds
+  TICKERTRENDS_API_URL: "https://api.tickertrends.com/v1"

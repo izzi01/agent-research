@@ -1,0 +1,191 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: grafana-charts
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://grafana.github.io/helm-charts
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: loki-stack
+  namespace: marketing-automation
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: loki-stack
+      version: '2.10.x'
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-charts
+        namespace: flux-system
+      interval: 12h
+  values:
+    loki:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 50Gi
+      config:
+        auth_enabled: false
+        ingester:
+          chunk_idle_period: 3m
+          chunk_block_size: 262144
+          chunk_retain_period: 1m
+          max_transfer_retries: 0
+          lifecycler:
+            ring:
+              kvstore:
+                store: inmemory
+              replication_factor: 1
+        limits_config:
+          enforce_metric_name: false
+          reject_old_samples: true
+          reject_old_samples_max_age: 168h
+          max_query_length: 721h
+          retention_period: 30d
+        schema_config:
+          configs:
+            - from: 2024-01-01
+              store: boltdb-shipper
+              object_store: filesystem
+              schema: v11
+              index:
+                prefix: index_
+                period: 24h
+        server:
+          http_listen_port: 3100
+        storage_config:
+          boltdb_shipper:
+            active_index_directory: /data/loki/boltdb-shipper-active
+            cache_location: /data/loki/boltdb-shipper-cache
+            cache_ttl: 24h
+            shared_store: filesystem
+          filesystem:
+            directory: /data/loki/chunks
+        chunk_store_config:
+          max_look_back_period: 0s
+        table_manager:
+          retention_deletes_enabled: true
+          retention_period: 720h
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 200m
+        limits:
+          memory: 2Gi
+          cpu: 1000m
+
+    promtail:
+      enabled: true
+      config:
+        clients:
+          - url: http://loki:3100/loki/api/v1/push
+        positions:
+          filename: /tmp/positions.yaml
+        scrape_configs:
+          # Scrape all pods in marketing-automation namespace
+          - job_name: kubernetes-pods
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names:
+                    - marketing-automation
+            relabel_configs:
+              # Add pod metadata as labels
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+              - source_labels: [__meta_kubernetes_namespace]
+                target_label: namespace
+              - source_labels: [__meta_kubernetes_pod_label_app]
+                target_label: app
+              - source_labels: [__meta_kubernetes_pod_container_name]
+                target_label: container
+              # Parse log path
+              - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+                target_label: __path__
+                separator: /
+                replacement: /var/log/pods/*$1/*.log
+            pipeline_stages:
+              # Parse JSON logs
+              - json:
+                  expressions:
+                    level: level
+                    msg: message
+                    timestamp: timestamp
+                    agent_name: agent_name
+                    workflow_id: workflow_id
+              # Extract timestamp
+              - timestamp:
+                  source: timestamp
+                  format: RFC3339
+              # Add labels from parsed fields
+              - labels:
+                  level:
+                  agent_name:
+                  workflow_id:
+
+          # Specific scrape config for AgentOS logs
+          - job_name: agentos-logs
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names:
+                    - marketing-automation
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_label_app]
+                action: keep
+                regex: agentos
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+            pipeline_stages:
+              - json:
+                  expressions:
+                    level: level
+                    agent_name: agent.name
+                    agent_status: agent.status
+                    execution_id: execution.id
+                    duration_ms: execution.duration_ms
+                    error: error
+              - labels:
+                  level:
+                  agent_name:
+                  agent_status:
+
+          # Specific scrape config for n8n workflow logs
+          - job_name: n8n-workflow-logs
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names:
+                    - marketing-automation
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_label_app]
+                action: keep
+                regex: n8n
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+            pipeline_stages:
+              - json:
+                  expressions:
+                    workflow_name: workflow.name
+                    workflow_id: workflow.id
+                    execution_id: execution.id
+                    status: execution.status
+                    error: error
+              - labels:
+                  workflow_name:
+                  status:
+
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 100m
+        limits:
+          memory: 256Mi
+          cpu: 200m

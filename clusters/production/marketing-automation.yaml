@@ -1,0 +1,106 @@
+---
+# GitRepository source for marketing automation application
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: marketing-automation
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/your-org/marketing-automation  # REPLACE with your repo
+  ref:
+    branch: main
+  secretRef:
+    name: github-deploy-key  # Optional: for private repos
+  ignore: |
+    # exclude all
+    /*
+    # include k8s directory
+    !/k8s/
+
+---
+# Kustomization for base resources
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: marketing-automation-base
+  namespace: flux-system
+spec:
+  interval: 10m
+  targetNamespace: marketing-automation
+  sourceRef:
+    kind: GitRepository
+    name: marketing-automation
+  path: ./k8s/base
+  prune: true
+  wait: true
+  timeout: 5m
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: agentos
+      namespace: marketing-automation
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: n8n
+      namespace: marketing-automation
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: approval-ui
+      namespace: marketing-automation
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: postgres
+      namespace: marketing-automation
+  dependsOn:
+    - name: infrastructure
+
+---
+# Kustomization for monitoring stack
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: marketing-automation-monitoring
+  namespace: flux-system
+spec:
+  interval: 10m
+  targetNamespace: marketing-automation
+  sourceRef:
+    kind: GitRepository
+    name: marketing-automation
+  path: ./k8s/monitoring
+  prune: true
+  wait: true
+  timeout: 10m
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: kube-prometheus-stack-operator
+      namespace: marketing-automation
+  dependsOn:
+    - name: marketing-automation-base
+
+---
+# Infrastructure Kustomization (cert-manager, nginx-ingress, sealed-secrets)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: marketing-automation
+  path: ./clusters/production
+  prune: false  # Don't auto-delete infrastructure
+  wait: true
+  timeout: 10m
+  patches:
+    - patch: |
+        - op: replace
+          path: /spec/values/controller/service/annotations/service.beta.kubernetes.io~1do-loadbalancer-name
+          value: marketing-automation-lb
+      target:
+        kind: HelmRelease
+        name: nginx-ingress-controller

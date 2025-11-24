@@ -1,0 +1,374 @@
+---
+# Business Metrics Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-business-metrics
+  namespace: marketing-automation
+  labels:
+    grafana_dashboard: "1"
+data:
+  business-metrics.json: |
+    {
+      "dashboard": {
+        "title": "Marketing Automation - Business Metrics",
+        "tags": ["marketing", "business"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Daily Content Generated",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "increase(agent_executions_total{agent_name=\"TextCreator\",status=\"completed\"}[24h])",
+                "legendFormat": "Text Content"
+              },
+              {
+                "expr": "increase(agent_executions_total{agent_name=\"VideoGenerator\",status=\"completed\"}[24h])",
+                "legendFormat": "Video Content"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Approval Rate",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "(sum(increase(content_approval_total{decision=\"approved\"}[24h])) / sum(increase(content_approval_total[24h]))) * 100",
+                "legendFormat": "Approval Rate %"
+              }
+            ],
+            "type": "gauge",
+            "options": {
+              "min": 0,
+              "max": 100,
+              "thresholds": [
+                {"value": 0, "color": "red"},
+                {"value": 50, "color": "yellow"},
+                {"value": 80, "color": "green"}
+              ]
+            }
+          },
+          {
+            "title": "Platform Posts (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "increase(platform_posts_total{platform=\"facebook\"}[24h])",
+                "legendFormat": "Facebook"
+              },
+              {
+                "expr": "increase(platform_posts_total{platform=\"tiktok\"}[24h])",
+                "legendFormat": "TikTok"
+              },
+              {
+                "expr": "increase(platform_posts_total{platform=\"shopee\"}[24h])",
+                "legendFormat": "Shopee"
+              },
+              {
+                "expr": "increase(platform_posts_total{platform=\"youtube\"}[24h])",
+                "legendFormat": "YouTube"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Video Generation Cost (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "increase(video_generation_cost_usd{tool=\"simplified\"}[24h])",
+                "legendFormat": "Simplified"
+              },
+              {
+                "expr": "increase(video_generation_cost_usd{tool=\"heygen\"}[24h])",
+                "legendFormat": "HeyGen"
+              },
+              {
+                "expr": "increase(video_generation_cost_usd{tool=\"did\"}[24h])",
+                "legendFormat": "D-ID"
+              },
+              {
+                "expr": "increase(video_generation_cost_usd{tool=\"runway\"}[24h])",
+                "legendFormat": "Runway"
+              }
+            ],
+            "type": "graph",
+            "yaxes": [{"format": "currencyUSD"}]
+          },
+          {
+            "title": "LLM Token Usage (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "increase(llm_tokens_used_total{provider=\"anthropic\",type=\"input\"}[24h])",
+                "legendFormat": "Input Tokens"
+              },
+              {
+                "expr": "increase(llm_tokens_used_total{provider=\"anthropic\",type=\"output\"}[24h])",
+                "legendFormat": "Output Tokens"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "LLM Cost (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "(increase(llm_tokens_used_total{provider=\"anthropic\",type=\"input\"}[24h]) * 0.000003) + (increase(llm_tokens_used_total{provider=\"anthropic\",type=\"output\"}[24h]) * 0.000015)",
+                "legendFormat": "Claude 4.0 Sonnet Cost"
+              }
+            ],
+            "type": "singlestat",
+            "format": "currencyUSD"
+          },
+          {
+            "title": "Approval Cycle Time",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, approval_cycle_time_seconds_bucket)",
+                "legendFormat": "p50"
+              },
+              {
+                "expr": "histogram_quantile(0.95, approval_cycle_time_seconds_bucket)",
+                "legendFormat": "p95"
+              },
+              {
+                "expr": "histogram_quantile(0.99, approval_cycle_time_seconds_bucket)",
+                "legendFormat": "p99"
+              }
+            ],
+            "type": "graph",
+            "yaxes": [{"format": "s"}]
+          },
+          {
+            "title": "Trends Monitored (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+            "targets": [
+              {
+                "expr": "increase(trends_monitored_total{source=\"tiktok\"}[24h])",
+                "legendFormat": "TikTok Trends Discovered"
+              },
+              {
+                "expr": "increase(trends_used_in_content_total[24h])",
+                "legendFormat": "Trends Used in Content"
+              }
+            ],
+            "type": "graph"
+          }
+        ],
+        "refresh": "30s",
+        "time": {"from": "now-24h", "to": "now"}
+      }
+    }
+
+---
+# System Health Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-system-health
+  namespace: marketing-automation
+  labels:
+    grafana_dashboard: "1"
+data:
+  system-health.json: |
+    {
+      "dashboard": {
+        "title": "Marketing Automation - System Health",
+        "tags": ["system", "infrastructure"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "AgentOS Pod CPU Usage",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"marketing-automation\",pod=~\"agentos.*\"}[5m])",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "AgentOS Pod Memory Usage",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{namespace=\"marketing-automation\",pod=~\"agentos.*\"} / 1024 / 1024 / 1024",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "type": "graph",
+            "yaxes": [{"format": "GB"}]
+          },
+          {
+            "title": "Agent Execution Duration (p95)",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, agent_execution_duration_seconds_bucket{agent_name=\"TrendMonitor\"})",
+                "legendFormat": "TrendMonitor"
+              },
+              {
+                "expr": "histogram_quantile(0.95, agent_execution_duration_seconds_bucket{agent_name=\"ContentStrategist\"})",
+                "legendFormat": "ContentStrategist"
+              },
+              {
+                "expr": "histogram_quantile(0.95, agent_execution_duration_seconds_bucket{agent_name=\"TextCreator\"})",
+                "legendFormat": "TextCreator"
+              },
+              {
+                "expr": "histogram_quantile(0.95, agent_execution_duration_seconds_bucket{agent_name=\"VideoGenerator\"})",
+                "legendFormat": "VideoGenerator"
+              }
+            ],
+            "type": "graph",
+            "yaxes": [{"format": "s"}]
+          },
+          {
+            "title": "PostgreSQL Connections",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends{datname=\"marketing_automation\"}",
+                "legendFormat": "Active Connections"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "PostgreSQL Database Size",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "pg_database_size_bytes{datname=\"marketing_automation\"} / 1024 / 1024 / 1024",
+                "legendFormat": "Database Size"
+              }
+            ],
+            "type": "graph",
+            "yaxes": [{"format": "GB"}]
+          },
+          {
+            "title": "n8n Workflow Executions",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "increase(n8n_workflow_executions_total[5m])",
+                "legendFormat": "{{workflow_name}}"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "API Error Rate",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+            "targets": [
+              {
+                "expr": "(sum(rate(agent_executions_total{status=\"failed\"}[5m])) / sum(rate(agent_executions_total[5m]))) * 100",
+                "legendFormat": "Error Rate %"
+              }
+            ],
+            "type": "graph",
+            "alert": {
+              "conditions": [
+                {
+                  "evaluator": {"params": [5], "type": "gt"},
+                  "operator": {"type": "and"},
+                  "query": {"params": ["A", "5m", "now"]},
+                  "reducer": {"params": [], "type": "avg"},
+                  "type": "query"
+                }
+              ],
+              "frequency": "1m",
+              "handler": 1,
+              "name": "High Error Rate Alert",
+              "notifications": []
+            }
+          },
+          {
+            "title": "Pod Restart Count (24h)",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+            "targets": [
+              {
+                "expr": "increase(kube_pod_container_status_restarts_total{namespace=\"marketing-automation\"}[24h])",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "type": "graph"
+          }
+        ],
+        "refresh": "30s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }
+
+---
+# Agent Performance Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-agent-performance
+  namespace: marketing-automation
+  labels:
+    grafana_dashboard: "1"
+data:
+  agent-performance.json: |
+    {
+      "dashboard": {
+        "title": "Marketing Automation - Agent Performance",
+        "tags": ["agents", "performance"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Agent Executions by Status",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "sum by (agent_name, status) (increase(agent_executions_total[5m]))",
+                "legendFormat": "{{agent_name}} - {{status}}"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Agent Success Rate",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "(sum by (agent_name) (increase(agent_executions_total{status=\"completed\"}[1h])) / sum by (agent_name) (increase(agent_executions_total[1h]))) * 100",
+                "legendFormat": "{{agent_name}}"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Video Generation Queue Length",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "video_generation_queue_length",
+                "legendFormat": "Pending Videos"
+              }
+            ],
+            "type": "graph"
+          },
+          {
+            "title": "Content Awaiting Approval",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "content_pending_approval_count",
+                "legendFormat": "Pending Approval"
+              }
+            ],
+            "type": "singlestat"
+          }
+        ],
+        "refresh": "30s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }
