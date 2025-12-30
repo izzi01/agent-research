@@ -10,11 +10,12 @@ This agent:
 """
 
 from agno import Agent
-from agno.models.anthropic import Claude
 from agno.storage.postgres import PostgresStorage
 from typing import List, Dict, Optional
 import logging
 from datetime import datetime
+import os
+from .glm_model import create_vietnamese_glm
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class TextCreator(Agent):
     def __init__(
         self,
         db_url: str,
-        model_id: str = "claude-sonnet-4-20250514"
+        model_id: str = "glm-4.6"
     ):
         # Storage for generated copy
         storage = PostgresStorage(
@@ -47,10 +48,13 @@ class TextCreator(Agent):
             db_url=db_url
         )
 
+        # Initialize GLM model optimized for Vietnamese
+        glm_model = create_vietnamese_glm(model_id=model_id)
+        
         super().__init__(
             name="TextCreator",
-            model=Claude(id=model_id),
-            description="Generate final Vietnamese social media copy optimized for each platform",
+            model=glm_model.model,
+            description="Generate final Vietnamese social media copy optimized for each platform using Z.AI GLM",
             instructions=[
                 "You are an expert Vietnamese copywriter specializing in social media marketing",
                 "Write in natural, conversational Vietnamese that resonates with Gen Z and Millennials",

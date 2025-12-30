@@ -9,12 +9,13 @@ This agent:
 """
 
 from agno import Agent
-from agno.models.anthropic import Claude
 from agno.storage.postgres import PostgresStorage
 from agno.knowledge.vector_db import PgVector
 from typing import List, Dict, Optional
 import logging
 from datetime import datetime, timedelta
+import os
+from .glm_model import create_vietnamese_glm
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class TrendMonitor(Agent):
         self,
         db_url: str,
         tickertrends_api_key: str,
-        model_id: str = "claude-sonnet-4-20250514"
+        model_id: str = "glm-4.6"
     ):
         # Initialize storage for agent state and memory
         storage = PostgresStorage(
@@ -44,10 +45,13 @@ class TrendMonitor(Agent):
             embedder="openai"  # or use sentence-transformers for free option
         )
 
+        # Initialize GLM model optimized for Vietnamese
+        glm_model = create_vietnamese_glm(model_id=model_id)
+        
         super().__init__(
             name="TrendMonitor",
-            model=Claude(id=model_id),
-            description="Monitor TikTok trends and identify viral opportunities for Vietnamese e-commerce",
+            model=glm_model.model,
+            description="Monitor TikTok trends and identify viral opportunities for Vietnamese e-commerce using Z.AI GLM",
             instructions=[
                 "Monitor trending TikTok hashtags in Vietnamese market",
                 "Analyze engagement metrics (views, likes, shares, comments)",
@@ -271,8 +275,8 @@ if __name__ == "__main__":
 
     # Initialize agent
     agent = TrendMonitor(
-        db_url=os.getenv("DATABASE_URL"),
-        tickertrends_api_key=os.getenv("TICKERTRENDS_API_KEY")
+        db_url=os.getenv("DATABASE_URL", "postgresql://agno:password@localhost:5432/marketing_automation"),
+        tickertrends_api_key=os.getenv("TICKERTRENDS_API_KEY", "demo_key")
     )
 
     # Run trend scan

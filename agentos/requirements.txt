@@ -1,45 +1,47 @@
 # AgentOS Requirements for Vietnamese Marketing Automation
 
 # Agno Framework
-agno==0.3.0  # AI agent framework
-agno-anthropic==0.2.0  # Claude integration
+agno==0.3.2  # AI agent framework - latest stable
+agno-anthropic==0.2.1  # Claude integration - latest stable
+agno-openai==0.1.3  # OpenAI integration for GLM compatibility
 
 # FastAPI and Server
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-python-multipart==0.0.6
+fastapi==0.115.6  # Latest stable
+uvicorn[standard]==0.32.1  # Latest stable
+pydantic==2.10.4  # Latest stable
+python-multipart==0.0.17  # Latest stable
 
 # Database
-psycopg2-binary==2.9.9  # PostgreSQL adapter
-sqlalchemy==2.0.25  # ORM
-alembic==1.13.1  # Database migrations
-pgvector==0.2.4  # Vector similarity search
+psycopg2-binary==2.9.10  # Latest PostgreSQL adapter
+sqlalchemy==2.0.36  # Latest ORM
+alembic==1.14.0  # Latest database migrations
+pgvector==0.3.0  # Latest vector similarity search
 
 # AI/ML
-anthropic==0.18.0  # Claude API
-openai==1.12.0  # For embeddings (optional)
-sentence-transformers==2.3.1  # Free embedding alternative
-tiktoken==0.5.2  # Token counting
+anthropic==0.40.0  # Latest Claude API
+openai==1.57.0  # Latest OpenAI API for GLM compatibility
+sentence-transformers==3.3.1  # Latest free embedding alternative
+tiktoken==0.8.0  # Latest token counting
+zhipuai==2.1.0  # Z.AI GLM API client
 
 # Monitoring and Metrics
-prometheus-client==0.19.0  # Prometheus metrics
+prometheus-client==0.21.0  # Latest Prometheus metrics
 python-json-logger==2.0.7  # Structured logging
 
 # HTTP Clients
-httpx==0.26.0  # Async HTTP client
-requests==2.31.0  # Sync HTTP client
+httpx==0.28.1  # Latest async HTTP client
+requests==2.32.3  # Latest sync HTTP client
 
 # Utilities
 python-dotenv==1.0.1  # Environment variables
-pyyaml==6.0.1  # YAML parsing
-tenacity==8.2.3  # Retry logic
+pyyaml==6.0.2  # Latest YAML parsing
+tenacity==9.0.0  # Latest retry logic
 
 # Vietnamese Language Processing (optional)
-underthesea==6.7.0  # Vietnamese NLP toolkit
+underthesea==6.8.0  # Latest Vietnamese NLP toolkit
 
 # Development Dependencies (remove in production)
-pytest==7.4.4
-pytest-asyncio==0.23.3
-black==24.1.1
-flake8==7.0.0
+pytest==8.3.3  # Latest
+pytest-asyncio==0.24.0  # Latest
+black==24.10.0  # Latest
+flake8==7.1.1  # Latest

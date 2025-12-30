@@ -41,34 +41,50 @@ spec:
             - containerPort: 3000
               name: http
           env:
-            # Backend API URL
-            - name: REACT_APP_API_URL
+            # Next.js Backend API URL
+            - name: NEXT_PUBLIC_API_URL
               value: "http://agentos-service:8080"
-            - name: REACT_APP_WEBSOCKET_URL
-              value: "ws://agentos-service:8080/ws"
-            # Environment
+            
+            # OpenAI API Key (from secret)
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: marketing-automation-secrets
+                  key: openai-api-key
+                  optional: true
+            
+            # Next.js Configuration
             - name: NODE_ENV
               value: "production"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
+          
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
               memory: "512Mi"
-              cpu: "500m"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          
           livenessProbe:
             httpGet:
-              path: /
+              path: /api/health
               port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            timeoutSeconds: 10
             failureThreshold: 3
+          
           readinessProbe:
             httpGet:
-              path: /
+              path: /api/health
               port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 3

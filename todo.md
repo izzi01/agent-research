@@ -1,0 +1,2 @@
+- Discover proper MKT workflow
+- Creatte content directive before process

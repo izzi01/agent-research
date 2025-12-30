@@ -10,12 +10,13 @@ This agent:
 """
 
 from agno import Agent
-from agno.models.anthropic import Claude
 from agno.storage.postgres import PostgresStorage
 from agno.knowledge.vector_db import PgVector
 from typing import List, Dict, Optional
 import logging
 from datetime import datetime
+import os
+from .glm_model import create_vietnamese_glm
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class ContentStrategist(Agent):
     def __init__(
         self,
         db_url: str,
-        model_id: str = "claude-sonnet-4-20250514"
+        model_id: str = "glm-4.6"
     ):
         # Storage for agent runs
         storage = PostgresStorage(
@@ -50,10 +51,13 @@ class ContentStrategist(Agent):
             embedder="openai"
         )
 
+        # Initialize GLM model optimized for Vietnamese
+        glm_model = create_vietnamese_glm(model_id=model_id)
+        
         super().__init__(
             name="ContentStrategist",
-            model=Claude(id=model_id),
-            description="Create strategic Vietnamese content briefs by matching trends to products",
+            model=glm_model.model,
+            description="Create strategic Vietnamese content briefs by matching trends to products using Z.AI GLM",
             instructions=[
                 "You are an expert Vietnamese marketing strategist specializing in TikTok and social media content",
                 "Analyze trending topics and match them to relevant products from our catalog",
@@ -437,7 +441,7 @@ if __name__ == "__main__":
 
     # Initialize agent
     agent = ContentStrategist(
-        db_url=os.getenv("DATABASE_URL")
+        db_url=os.getenv("DATABASE_URL", "postgresql://agno:password@localhost:5432/marketing_automation")
     )
 
     # Sample trend from TrendMonitor
