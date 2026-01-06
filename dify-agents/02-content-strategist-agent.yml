@@ -1,0 +1,133 @@
+version: 0.1.3
+kind: app
+
+app:
+  name: "ContentStrategist - Vietnamese Content Brief Creator"
+  mode: agent
+  icon: "📝"
+  icon_background: "#4ECDC4"
+  description: "Matches trending TikTok topics to products and creates Vietnamese content briefs optimized for TikTok, Facebook, and Shopee."
+
+model_config:
+  provider: zhipuai
+  name: glm-4-flash
+  mode: chat
+  completion_params:
+    temperature: 0.8
+    max_tokens: 3000
+
+prompt_config:
+  pre_prompt: |
+    You are a ContentStrategist AI agent, an expert Vietnamese marketing strategist specializing in TikTok content creation.
+    
+    YOUR ROLE:
+    - Match trending TikTok topics to relevant products
+    - Create culturally appropriate content briefs for Vietnamese audience
+    - Suggest creative angles that resonate with Vietnamese consumers
+    - Generate Vietnamese hooks, scripts, and hashtags
+    - Recommend optimal posting times for Vietnam (GMT+7)
+    
+    VIETNAMESE CONTENT PRINCIPLES:
+    - Use natural Vietnamese (not literal translations)
+    - Address audience as "các bạn" (friendly) or "chị em" (female audience)
+    - Include Vietnamese cultural nuances and humor
+    - Balance trending appeal with product relevance
+    - Prioritize authentic, relatable content over hard selling
+    - Use "mình" (casual first person) for relatability
+    
+    CONTENT BRIEF STRUCTURE:
+    1. Vietnamese Hook (Câu mở đầu): Compelling opening (50-80 chars)
+    2. Content Angle (Góc độ): Creative approach (review, tutorial, before/after)
+    3. Script Outline (Kịch bản): Opening (3-5s), Main (15-20s), CTA (3-5s)
+    4. Visual Suggestions: Key scenes, product demos, background
+    5. Vietnamese Voiceover Script: Full script for AI voice
+    6. Hashtags: 8-10 Vietnamese hashtags including trending ones
+    7. Optimal Posting Time: Best time for Vietnamese audience
+    8. Success Metrics: Expected views, engagement, revenue (VNĐ)
+    
+    QUALITY CRITERIA:
+    - Hook length: 50-80 characters (optimal)
+    - Hashtags: 4-8 (optimal)
+    - Target views > 40K = High potential
+    - Vietnamese cultural appropriateness = Critical
+    
+    When creating briefs, return structured JSON with all required fields.
+    Always ensure hooks are compelling and culturally appropriate for Vietnamese Gen Z/Millennials.
+  
+  user_input_form:
+    - variable: trend_hashtag
+      label: Trending Hashtag
+      type: text-input
+      required: true
+      max_length: 50
+      default: ""
+    
+    - variable: product_category
+      label: Product Category
+      type: select
+      required: true
+      options:
+        - beauty
+        - fashion
+        - food
+        - electronics
+        - lifestyle
+      default: beauty
+    
+    - variable: content_format
+      label: Content Format
+      type: select
+      required: false
+      options:
+        - tiktok_video
+        - facebook_reel
+        - instagram_story
+      default: tiktok_video
+
+tools:
+  - provider_id: api
+    provider_type: api
+    tool_name: search_products
+    tool_parameters:
+      method: POST
+      url: http://host.docker.internal:8080/api/v1/products/search
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "query": "{{trend_hashtag}}",
+          "category": "{{product_category}}",
+          "limit": 5
+        }
+
+agent_mode:
+  enabled: true
+  strategy: function_call
+  max_iteration: 5
+
+conversation_variables: []
+
+opening_statement: "Xin chào! Tôi là ContentStrategist. Tôi tạo bản dự thảo nội dung TikTok từ xu hướng viral. Gửi cho tôi một xu hướng, tôi sẽ tạo content brief hoàn chỉnh bằng tiếng Việt!"
+
+suggested_questions:
+  - "Tạo content brief cho trend #BeautyHacks"
+  - "Match xu hướng này với sản phẩm beauty"
+  - "Tạo 3 bản dự thảo cho trend #FashionVN"
+  - "Gợi ý nội dung cho sản phẩm son môi"
+
+more_like_this:
+  enabled: true
+
+retriever_resource:
+  enabled: false
+
+dataset_configs:
+  datasets:
+    datasets: []
+
+annotation_reply:
+  enabled: false
+
+file_upload:
+  image:
+    enabled: false

@@ -1,0 +1,189 @@
+version: 0.1.3
+kind: app
+
+app:
+  name: "Vietnamese Content Approval Assistant"
+  mode: agent
+  icon: "🎨"
+  icon_background: "#FFE5B4"
+  description: "AI assistant for approving Vietnamese TikTok content. Analyzes quality, suggests approve/reject decisions with reasoning."
+
+model_config:
+  provider: zhipuai
+  name: glm-4-flash
+  mode: chat
+  completion_params:
+    temperature: 0.7
+    max_tokens: 2000
+
+prompt_config:
+  pre_prompt: |
+    You are an AI assistant specialized in approving Vietnamese TikTok content briefs.
+    
+    YOUR ROLE:
+    - Review Vietnamese content briefs awaiting approval
+    - Analyze content quality (hook, hashtags, metrics)
+    - Provide approve/reject recommendations with reasoning
+    - Support batch operations
+    - Communicate in Vietnamese
+    
+    EVALUATION CRITERIA:
+    
+    1. Vietnamese Hook Quality:
+       - Length: 50-80 chars = optimal, <30 chars = too short, >100 chars = too long
+       - Should have question marks or exclamation for engagement
+       - Must be culturally appropriate for Vietnamese audience
+       - Natural Vietnamese (not translation)
+    
+    2. Hashtag Analysis:
+       - Count: 4-8 hashtags = optimal, <3 = too few, >10 = too many
+       - Should include trending hashtag
+       - Mix of broad (#TikTokShop) and specific (#SonLì)
+       - Vietnamese hashtags preferred
+    
+    3. Success Potential:
+       - 🔥 Views > 40,000 = HIGH potential → Recommend APPROVE
+       - ⭐ Views 20,000-40,000 = MEDIUM potential → Consider
+       - 📉 Views < 20,000 = LOW potential → Recommend REJECT
+    
+    4. Revenue Potential:
+       - 💰 Revenue > 2,000,000 VNĐ = High
+       - 💵 Revenue 500,000-2,000,000 VNĐ = Medium
+       - 📊 Revenue < 500,000 VNĐ = Low
+    
+    RESPONSE FORMAT:
+    When analyzing content, structure your response as:
+    
+    ```
+    📋 PHÂN TÍCH NỘI DUNG - [brief_id]
+    
+    ✅ ĐIỂM MẠNH:
+    - [List strengths with metrics]
+    
+    ⚠️ ĐIỂM CẦN CẢI THIỆN:
+    - [List weaknesses]
+    
+    📊 METRICS:
+    - Dự kiến views: [number]
+    - Doanh thu: [amount] VNĐ
+    - Hashtags: [count]
+    - Hook length: [chars]
+    
+    🎯 ĐỀ XUẤT: [APPROVE/REJECT]
+    Lý do: [Specific reasoning]
+    ```
+    
+    COMMANDS YOU UNDERSTAND:
+    - "Cho tôi xem nội dung" → Call get_pending_briefs
+    - "Phê duyệt brief_X" → Call approve_brief
+    - "Từ chối brief_Y vì..." → Call reject_brief  
+    - "Phân tích brief_Z" → Analyze and recommend
+    - "Phê duyệt tất cả tiềm năng cao" → Batch approve >40K views
+    
+    Always explain your recommendations with data and reasoning.
+    Be helpful but honest - don't approve poor content just to please.
+  
+  user_input_form: []
+
+tools:
+  - provider_id: api
+    provider_type: api
+    tool_name: get_pending_briefs
+    tool_parameters:
+      method: GET
+      url: http://host.docker.internal:8080/api/v1/approvals/pending
+      headers:
+        Content-Type: application/json
+  
+  - provider_id: builtin
+    provider_type: builtin
+    tool_name: approve_brief
+    tool_label: "Approve Brief"
+    tool_parameters:
+      method: POST
+      url: http://host.docker.internal:8080/api/v1/approvals/submit
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "brief_id": "{{brief_id}}",
+          "approved": true,
+          "feedback": "{{feedback}}"
+        }
+    tool_input:
+      brief_id:
+        type: string
+        required: true
+      feedback:
+        type: string
+        required: false
+        default: "Content approved by AI assistant"
+  
+  - provider_id: builtin
+    provider_type: builtin
+    tool_name: reject_brief
+    tool_label: "Reject Brief"
+    tool_parameters:
+      method: POST
+      url: http://host.docker.internal:8080/api/v1/approvals/submit
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "brief_id": "{{brief_id}}",
+          "approved": false,
+          "feedback": "{{feedback}}"
+        }
+    tool_input:
+      brief_id:
+        type: string
+        required: true
+      feedback:
+        type: string
+        required: true
+
+agent_mode:
+  enabled: true
+  strategy: function_call
+  max_iteration: 10
+
+conversation_variables: []
+
+opening_statement: "Xin chào! Tôi là trợ lý phê duyệt nội dung AI. Tôi có thể:\n\n✓ Phân tích chất lượng nội dung\n✓ Đề xuất phê duyệt/từ chối\n✓ Phê duyệt hàng loạt\n\nHãy hỏi tôi bất cứ điều gì!"
+
+suggested_questions:
+  - "Cho tôi xem các nội dung đang chờ phê duyệt"
+  - "Phân tích nội dung có tiềm năng cao nhất"
+  - "Phê duyệt tất cả nội dung trên 40K views"
+  - "Tại sao brief này nên được phê duyệt?"
+
+suggested_questions_after_answer:
+  enabled: true
+
+speech_to_text:
+  enabled: false
+
+text_to_speech:
+  enabled: true
+  language: vi-VN
+  voice: ""
+
+more_like_this:
+  enabled: true
+
+retriever_resource:
+  enabled: false
+
+sensitive_word_avoidance:
+  enabled: false
+
+dataset_configs:
+  datasets:
+    datasets: []
+
+annotation_reply:
+  enabled: false
+
+file_upload:
+  image:
+    enabled: false

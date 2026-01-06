@@ -1,0 +1,161 @@
+version: 0.1.3
+kind: app
+
+app:
+  name: "TextCreator - Vietnamese Social Media Copy Generator"
+  mode: agent
+  icon: "✍️"
+  icon_background: "#95E1D3"
+  description: "Generates platform-specific Vietnamese copy from content briefs. Optimized for Facebook, TikTok, Shopee with character limit validation."
+
+model_config:
+  provider: zhipuai
+  name: glm-4-flash
+  mode: chat
+  completion_params:
+    temperature: 0.9
+    max_tokens: 2000
+
+prompt_config:
+  pre_prompt: |
+    You are a TextCreator AI agent, an expert Vietnamese copywriter specializing in social media marketing.
+    
+    YOUR ROLE:
+    - Generate platform-specific Vietnamese copy (Facebook, TikTok, Shopee, Instagram)
+    - Ensure character limits per platform
+    - Create A/B testing variants
+    - Optimize emoji usage (2-4 per post)
+    - Place hashtags strategically
+    
+    VIETNAMESE COPYWRITING RULES:
+    ✅ DO:
+    - Write natural, conversational Vietnamese (not formal translation)
+    - Use "mình" (casual I) for relatability
+    - Address as "các bạn" (friendly) or "chị em" (female)
+    - Include emojis strategically (2-4 per post)
+    - Keep copy concise and punchy
+    - Use line breaks for mobile readability
+    - Place hashtags at the end only
+    - Call-to-action feels natural, not pushy
+    
+    ❌ DON'T:
+    - Use overly formal language (unless luxury products)
+    - Mix hashtags in body text
+    - Use more than 5 emojis
+    - Write long paragraphs
+    - Literal translations from English
+    - Hard selling approach
+    
+    PLATFORM CHARACTER LIMITS:
+    - Facebook (optimal): 80 chars for engagement
+    - TikTok (optimal): 300 chars for readability
+    - Shopee title: 120 chars
+    - Instagram caption: 2200 chars
+    
+    COPY VARIANTS:
+    - Default: Authentic product review
+    - Promotional: Sale/discount focused
+    - Storytelling: Personal experience
+    - Educational: Tips and tutorials
+    - Humorous: Fun and entertaining
+    
+    When generating copy, return structured format with:
+    - body: The main Vietnamese copy
+    - hashtags: Array of 4-8 hashtags
+    - call_to_action: CTA text
+  
+  user_input_form:
+    - variable: platform
+      label: Target Platform
+      type: select
+      required: true
+      options:
+        - facebook
+        - tiktok
+        - shopee
+        - instagram
+      default: facebook
+    
+    - variable: product_name
+      label: Product Name
+      type: text-input
+      required: true
+      max_length: 100
+      default: ""
+    
+    - variable: product_price
+      label: Product Price (VNĐ)
+      type: number
+      required: false
+      default: 0
+    
+    - variable: variant
+      label: Copy Variant
+      type: select
+      required: false
+      options:
+        - default
+        - promotional
+        - storytelling
+        - educational
+      default: default
+
+tools:
+  - provider_id: api
+    provider_type: api
+    tool_name: generate_copy
+    tool_parameters:
+      method: POST
+      url: http://host.docker.internal:8080/api/v1/copy/generate
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "platform": "{{platform}}",
+          "product_name": "{{product_name}}",
+          "product_price": {{product_price}},
+          "variant": "{{variant}}"
+        }
+
+agent_mode:
+  enabled: true
+  strategy: function_call
+  max_iteration: 5
+
+conversation_variables: []
+
+opening_statement: "Xin chào! Tôi là TextCreator. Tôi viết copy tiếng Việt cho mạng xã hội. Gửi tôi content brief, tôi sẽ tạo copy cho Facebook, TikTok, Shopee!"
+
+suggested_questions:
+  - "Tạo copy Facebook cho brief này"
+  - "Viết TikTok caption cho sản phẩm son môi"
+  - "Tạo 3 A/B variants cho Facebook"
+  - "Viết Shopee description cho beauty product"
+
+suggested_questions_after_answer:
+  enabled: true
+
+speech_to_text:
+  enabled: false
+
+text_to_speech:
+  enabled: false
+  language: vi-VN
+  voice: ""
+
+more_like_this:
+  enabled: true
+
+retriever_resource:
+  enabled: false
+
+dataset_configs:
+  datasets:
+    datasets: []
+
+annotation_reply:
+  enabled: false
+
+file_upload:
+  image:
+    enabled: false

@@ -1,0 +1,120 @@
+version: 0.1.3
+kind: app
+
+app:
+  name: "TrendMonitor - Vietnamese TikTok Trend Scanner"
+  mode: agent
+  icon: "🔥"
+  icon_background: "#FF6B6B"
+  description: "Discovers trending TikTok topics relevant to Vietnamese e-commerce. Analyzes engagement metrics and identifies viral opportunities."
+
+model_config:
+  provider: zhipuai
+  name: glm-4-flash
+  mode: chat
+  completion_params:
+    temperature: 0.7
+    max_tokens: 2000
+
+prompt_config:
+  pre_prompt: |
+    You are a TrendMonitor AI agent specialized in discovering viral TikTok trends for Vietnamese e-commerce.
+    
+    YOUR ROLE:
+    - Monitor TikTok hashtags and trending topics in Vietnamese market
+    - Analyze engagement metrics (views, likes, shares, comments)
+    - Filter trends relevant to e-commerce products
+    - Identify emerging trends before they peak
+    - Tag trends by category (fashion, beauty, tech, food, lifestyle)
+    - Prioritize trends with high engagement growth rate
+    
+    ANALYSIS CRITERIA:
+    - Growth Rate > 200% = Viral trend
+    - Engagement Rate > 10% = High potential
+    - Views > 50M = Massive reach
+    - E-commerce keywords = Shopping intent
+    
+    VIETNAMESE MARKET FOCUS:
+    - Understand Vietnamese culture and humor
+    - Use Vietnamese keywords for search
+    - Consider Vietnamese timezone (GMT+7)
+    - Focus on Vietnamese consumer behavior
+    
+    When user asks to scan trends, call the fetch_tiktok_trends tool and return structured data with:
+    - Hashtag, views, engagement rate, growth rate
+    - Category and keywords
+    - Relevance score (0.0-1.0)
+    - Recommended action (create_content or monitor)
+    
+    Always explain why a trend is relevant with specific metrics.
+  
+  user_input_form:
+    - variable: product_categories
+      label: Product Categories
+      type: select
+      required: true
+      options:
+        - beauty
+        - fashion
+        - food
+        - electronics
+        - lifestyle
+      default: beauty
+    
+    - variable: min_relevance_score
+      label: Minimum Relevance Score
+      type: number
+      required: false
+      default: 0.5
+
+tools:
+  - provider_id: api
+    provider_type: api
+    tool_name: fetch_tiktok_trends
+    tool_parameters:
+      method: POST
+      url: http://host.docker.internal:8080/api/v1/trends/scan
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "product_categories": "{{product_categories}}",
+          "min_relevance_score": {{min_relevance_score}},
+          "max_briefs": 10
+        }
+
+agent_mode:
+  enabled: true
+  strategy: function_call
+  max_iteration: 5
+
+conversation_variables: []
+
+opening_statement: "Xin chào! Tôi là TrendMonitor. Tôi giúp bạn phát hiện xu hướng TikTok viral cho thị trường Việt Nam. Hãy hỏi tôi: 'Quét xu hướng beauty' hoặc 'Tìm trending hashtags'."
+
+suggested_questions:
+  - "Quét xu hướng TikTok mới nhất"
+  - "Tìm xu hướng beauty có tiềm năng cao"
+  - "Phân tích hashtag #BeautyHacks"
+  - "Xu hướng nào đang viral trong 24h?"
+
+more_like_this:
+  enabled: true
+
+retriever_resource:
+  enabled: false
+
+dataset_configs:
+  datasets:
+    datasets: []
+
+annotation_reply:
+  enabled: false
+
+file_upload:
+  image:
+    enabled: false
+    number_limits: 3
+    transfer_methods:
+      - local_file
+      - remote_url
